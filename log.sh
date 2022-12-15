@@ -17,6 +17,10 @@ log._print() {
 	[ $(log._level "$log_LEVEL") -le $1 ] && echo -e "$2" >&2
 }
 
+log.enabled() {
+	[ $(log._level "$log_LEVEL") -le $(log._level "$1") ]
+}
+
 log.trace() {
 	log._print 0 "$1"
 }

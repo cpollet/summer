@@ -12,7 +12,11 @@ source "$SCRIPTPATH/log.sh"
 http_DEBUG=false
 
 http._debug() {
-  log.enabled trace || [ "$http_DEBUG" = "true" ] && echo -n "-v"
+  if log.enabled trace || [ "$http_DEBUG" = "true" ]; then
+    echo -n "--verbose"
+  else
+    echo -n "--no-verbose"
+  fi
 }
 
 http._curl() {
@@ -21,7 +25,8 @@ http._curl() {
 
   log.debug "-> $verb $url"
 
-  local response="$(http._format_response "$(curl "$(http._debug)" "$url" \
+  local response="$(http._format_response "$(curl "$url" \
+    "$(http._debug)" \
     --silent \
     --write-out '\n{"status":%{response_code},"content_type":"%{content_type}"}' \
     "$@" \

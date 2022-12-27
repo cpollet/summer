@@ -10,6 +10,8 @@ source "$SCRIPTPATH/string.sh"
 source "$SCRIPTPATH/log.sh"
 
 http_DEBUG=false
+http_SSL_INSECURE=false
+http_DUMP_CURL_COMMAND=false
 
 http._debug() {
   if log.enabled trace || [ "$http_DEBUG" = "true" ]; then
@@ -19,19 +21,46 @@ http._debug() {
   fi
 }
 
+http._insecure() {
+  if [ "$http_SSL_INSECURE" = "true" ]; then
+    echo -n "--insecure"
+  else
+    echo -n "--no-insecure"
+  fi
+}
+
 http._curl() {
   local verb="$1"; shift
   local url="$1"; shift
 
   log.debug "-> $verb $url"
 
+  if [ "true" = "$http_DUMP_CURL_COMMAND" ]; then
+    echo -ne "
+curl \"$url\" \\\\
+  $(http._debug) \\\\
+  $(http._insecure) \\\\
+  --silent \\\\
+  --write-out '\\\n{\"status\":%{response_code},\"content_type\":\"%{content_type}\"}' \\\\\n" >&2
+    for value in "$@"; do
+      if [[ "$value" =~ ^[a-zA-Z0-9_-.]+$ ]]; then
+        echo -n "$value " >&2
+      else
+        echo -n "\"$value\" " >&2
+      fi
+    done
+    echo -e "\n" >&2
+  fi
+
   local response="$(http._format_response "$(curl "$url" \
     "$(http._debug)" \
+    "$(http._insecure)" \
     --silent \
     --write-out '\n{"status":%{response_code},"content_type":"%{content_type}"}' \
     "$@" \
   )")"
 
+  log.trace "response: START>$response<END"
   log.enabled debug && log.debug "$(echo "$response" | jq --color-output)"
 
   echo "$response"
